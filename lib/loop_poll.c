@@ -104,7 +104,7 @@ _poll_dispatch_and_take_back_(struct qb_loop_item *item,
 
 	assert(pe->state == QB_POLL_ENTRY_JOBLIST);
 	assert(pe->item.type == QB_LOOP_FD);
-
+	/* イベントハンドラの実行 */
 	res = pe->poll_dispatch_fn(pe->ufd.fd,
 				   pe->ufd.revents,
 				   pe->item.user_data);
@@ -192,7 +192,7 @@ qb_poll_fds_usage_check_(struct qb_poll_source *s)
 	}
 }
 
-
+/* fd pollイベントの生成 */
 struct qb_loop_source *
 qb_loop_poll_create(struct qb_loop *l)
 {
@@ -201,15 +201,15 @@ qb_loop_poll_create(struct qb_loop *l)
 		return NULL;
 	}
 	s->s.l = l;
-	s->s.dispatch_and_take_back = _poll_dispatch_and_take_back_;
+	s->s.dispatch_and_take_back = _poll_dispatch_and_take_back_;	/* 実行コールバックのセット */
 
 	s->poll_entries = qb_array_create_2(16, sizeof(struct qb_poll_entry), 16);
 	s->poll_entry_count = 0;
 	s->low_fds_event_fn = NULL;
 	s->not_enough_fds = QB_FALSE;
-
+	/* epoll(),kqueue(),poll()の３種類のpollが利用可能 */
 #ifdef USE_EPOLL
-	(void)qb_epoll_init(s);
+	(void)qb_epoll_init(s);	/* RHEL6.5では、epoll()が利用されている模様 */
 #endif
 #ifdef USE_KQUEUE
 	(void)qb_kqueue_init(s);
@@ -220,7 +220,7 @@ qb_loop_poll_create(struct qb_loop *l)
 
 	return (struct qb_loop_source *)s;
 }
-
+/* fd pollイベントの生成 */
 void
 qb_loop_poll_destroy(struct qb_loop *l)
 {
@@ -297,7 +297,7 @@ _poll_add_(struct qb_loop *l,
 	if (l == NULL) {
 		return -EINVAL;
 	}
-
+	/* fd pollイベントソースを利用している模様 */
 	s = (struct qb_poll_source *)l->fd_source;
 
 	install_pos = _get_empty_array_position_(s);
@@ -327,11 +327,12 @@ static int32_t
 _qb_poll_add_to_jobs_(struct qb_loop *l, struct qb_poll_entry *pe)
 {
 	assert(pe->item.type == QB_LOOP_FD);
+	/* levelリストのセット */
 	qb_loop_level_item_add(&l->level[pe->p], &pe->item);
 	pe->state = QB_POLL_ENTRY_JOBLIST;
 	return 1;
 }
-
+/* fdイベントの追加 */
 int32_t
 qb_loop_poll_add(struct qb_loop * lp,
 		 enum qb_loop_priority p,
@@ -358,9 +359,9 @@ qb_loop_poll_add(struct qb_loop * lp,
 	}
 	new_size = ((struct qb_poll_source *)l->fd_source)->poll_entry_count;
 
-	pe->poll_dispatch_fn = dispatch_fn;
+	pe->poll_dispatch_fn = dispatch_fn;			/* fdイベントの指定コールバックハンドラのセット */
 	pe->item.type = QB_LOOP_FD;
-	pe->add_to_jobs = _qb_poll_add_to_jobs_;
+	pe->add_to_jobs = _qb_poll_add_to_jobs_;	/* リストセットハンドラのセット */
 
 	if (new_size > size) {
 		qb_util_log(LOG_TRACE,
@@ -369,7 +370,7 @@ qb_loop_poll_add(struct qb_loop * lp,
 
 	return res;
 }
-
+/* fdイベントの挿入 */
 int32_t
 qb_loop_poll_mod(struct qb_loop * lp,
 		 enum qb_loop_priority p,
@@ -413,7 +414,7 @@ qb_loop_poll_mod(struct qb_loop * lp,
 
 	return -EBADF;
 }
-
+/* fdイベントの削除 */
 int32_t
 qb_loop_poll_del(struct qb_loop * lp, int32_t fd)
 {
@@ -496,7 +497,7 @@ _signal_dispatch_and_take_back_(struct qb_loop_item *item,
 	}
 	free(sig);
 }
-
+/* signal loopイベントの生成 */
 struct qb_loop_source *
 qb_loop_signals_create(struct qb_loop *l)
 {
@@ -647,7 +648,7 @@ _adjust_sigactions_(struct qb_signal_source *s)
 		}
 	}
 }
-
+/* signalイベントの追加 */
 int32_t
 qb_loop_signal_add(qb_loop_t * lp,
 		   enum qb_loop_priority p,
@@ -694,7 +695,7 @@ qb_loop_signal_add(qb_loop_t * lp,
 
 	return 0;
 }
-
+/* signalイベントの挿入 */
 int32_t
 qb_loop_signal_mod(qb_loop_t * lp,
 		   enum qb_loop_priority p,
@@ -730,7 +731,7 @@ qb_loop_signal_mod(qb_loop_t * lp,
 
 	return 0;
 }
-
+/* signalイベントの削除 */
 int32_t
 qb_loop_signal_del(qb_loop_t * lp, qb_loop_signal_handle handle)
 {

@@ -30,12 +30,12 @@ struct qb_loop_job {
 	struct qb_loop_item item;
 	qb_loop_job_dispatch_fn dispatch_fn;
 };
-
+/* JOBイベント実行コールバック */
 static void
 job_dispatch(struct qb_loop_item *item, enum qb_loop_priority p)
 {
 	struct qb_loop_job *job = qb_list_entry(item, struct qb_loop_job, item);
-
+	/* JOBイベントに設定されハンドラを実行 */
 	job->dispatch_fn(job->item.user_data);
 	free(job);
 
@@ -43,7 +43,7 @@ job_dispatch(struct qb_loop_item *item, enum qb_loop_priority p)
 	 * this is a one-shot so don't re-add
 	 */
 }
-
+/* JOBイベントのpoll処理 */
 static int32_t
 get_more_jobs(struct qb_loop_source *s, int32_t ms_timeout)
 {
@@ -66,7 +66,7 @@ get_more_jobs(struct qb_loop_source *s, int32_t ms_timeout)
 	}
 	return new_jobs;
 }
-
+/* JOBイベントの生成 */
 struct qb_loop_source *
 qb_loop_jobs_create(struct qb_loop *l)
 {
@@ -75,18 +75,18 @@ qb_loop_jobs_create(struct qb_loop *l)
 		return NULL;
 	}
 	s->l = l;
-	s->dispatch_and_take_back = job_dispatch;
-	s->poll = get_more_jobs;
+	s->dispatch_and_take_back = job_dispatch;	/* 実行コールバックのセット */
+	s->poll = get_more_jobs;					/* JOBイベントのpoll処理をセット */
 
 	return s;
 }
-
+/* JOBイベントの破棄 */
 void
 qb_loop_jobs_destroy(struct qb_loop *l)
 {
 	free(l->job_source);
 }
-
+/* JOBイベントの追加 */
 int32_t
 qb_loop_job_add(struct qb_loop *lp,
 		enum qb_loop_priority p,
@@ -109,17 +109,17 @@ qb_loop_job_add(struct qb_loop *lp,
 		return -ENOMEM;
 	}
 
-	job->dispatch_fn = dispatch_fn;
+	job->dispatch_fn = dispatch_fn;		/* 指定された実行コールバックのセット */
 	job->item.user_data = data;
 	job->item.source = l->job_source;
-	job->item.type = QB_LOOP_JOB;
-
+	job->item.type = QB_LOOP_JOB;		/* LOOPタイプをセット */
+										/* JOBリストへ追加 */
 	qb_list_init(&job->item.list);
 	qb_list_add_tail(&job->item.list, &l->level[p].wait_head);
 
 	return 0;
 }
-
+/* JOBイベント削除 */
 int32_t
 qb_loop_job_del(struct qb_loop *lp,
 		enum qb_loop_priority p,

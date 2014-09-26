@@ -46,9 +46,12 @@ struct qb_list_head {
  * @def QB_LIST_DECLARE()
  * Declare and initialize a list head.
  */
+/* リスト宣言マクロ */
+/* nemeのqb_list_head構造を定義して、next,prevにnameをセット */
 #define QB_LIST_DECLARE(name) \
     struct qb_list_head name = { &(name), &(name) }
-
+/* リスト初期化マクロ */
+/* 対象リストのnetxt,prevにptrをセット */
 #define QB_INIT_LIST_HEAD(ptr) do { \
 	(ptr)->next = (ptr); (ptr)->prev = (ptr); \
 } while (0)
@@ -74,6 +77,7 @@ static inline void qb_list_init(struct qb_list_head *head)
 static inline void qb_list_add(struct qb_list_head *element,
 			       struct qb_list_head *head)
 {
+	/* 追加位置(head)の前後と追加リストの前後をセット */
 	head->next->prev = element;
 	element->next = head->next;
 	element->prev = head;
@@ -90,10 +94,10 @@ static inline void qb_list_add(struct qb_list_head *element,
 static inline void qb_list_add_tail(struct qb_list_head *element,
 				    struct qb_list_head *head)
 {
-	head->prev->next = element;
-	element->next = head;
-	element->prev = head->prev;
-	head->prev = element;
+	head->prev->next = element;				/* 先頭の前の次のリスト(最後尾)に追加リストをセット */
+	element->next = head;					/* 追加リストのnextを先頭でセット */
+	element->prev = head->prev;				/* 追加リストのprevを先頭の前(追加前の最後尾)でセット */
+	head->prev = element;					/* 先頭の前に追加リストをセット */
 }
 
 /**
@@ -103,8 +107,8 @@ static inline void qb_list_add_tail(struct qb_list_head *element,
  */
 static inline void qb_list_del(struct qb_list_head *_remove)
 {
-	_remove->next->prev = _remove->prev;
-	_remove->prev->next = _remove->next;
+	_remove->next->prev = _remove->prev;	/* 削除対象の次のリストのprevを削除対象のprevでセット */
+	_remove->prev->next = _remove->next;    /* 削除対象の前のリストのnextを削除対象のnextでセット */
 }
 
 /**

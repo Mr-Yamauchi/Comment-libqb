@@ -75,7 +75,7 @@ _fini(struct qb_poll_source *s)
 		s->epollfd = -1;
 	}
 }
-
+/* fdイベント追加処理 */
 static int32_t
 _add(struct qb_poll_source *s, struct qb_poll_entry *pe, int32_t fd, int32_t events)
 {
@@ -91,7 +91,7 @@ _add(struct qb_poll_source *s, struct qb_poll_entry *pe, int32_t fd, int32_t eve
 	return res;
 }
 
-
+/* fdイベント挿入処理 */
 static int32_t
 _mod(struct qb_poll_source *s, struct qb_poll_entry *pe, int32_t fd, int32_t events)
 {
@@ -106,7 +106,7 @@ _mod(struct qb_poll_source *s, struct qb_poll_entry *pe, int32_t fd, int32_t eve
 	}
 	return res;
 }
-
+/* fdイベント削除処理 */
 static int32_t
 _del(struct qb_poll_source *s, struct qb_poll_entry *pe, int32_t fd, int32_t arr_index)
 {
@@ -138,7 +138,7 @@ _poll_entry_from_handle_(struct qb_poll_source *s,
 	*pe_pt = pe;
 	return 0;
 }
-
+/* fdイベントのepoll()処理 */
 static int32_t
 _poll_and_add_to_jobs_(struct qb_loop_source *src, int32_t ms_timeout)
 {
@@ -153,7 +153,7 @@ _poll_and_add_to_jobs_(struct qb_loop_source *src, int32_t ms_timeout)
 	qb_poll_fds_usage_check_(s);
 
 retry_poll:
-
+	/* epoll_wait()によりfdイベント確認 */
 	event_count = epoll_wait(s->epollfd, events, MAX_EVENTS, ms_timeout);
 
 	if (errno == EINTR && event_count == -1) {
@@ -188,7 +188,7 @@ retry_poll:
 
 	return new_jobs;
 }
-
+/* fdイベント epoll()初期化処理 */
 int32_t
 qb_epoll_init(struct qb_poll_source *s)
 {

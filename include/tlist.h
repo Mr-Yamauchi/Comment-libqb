@@ -46,13 +46,13 @@ struct timerlist_timer {
 	void *data;
 	timer_handle handle_addr;
 };
-
+/* timerリスト初期化 */
 static inline void timerlist_init(struct timerlist *timerlist)
 {
 	qb_list_init(&timerlist->timer_head);
 	timerlist_hertz = qb_util_nano_monotonic_hz();
 }
-
+/* timerリストへのtimerの追加 */
 static inline void timerlist_add(struct timerlist *timerlist,
 				 struct timerlist_timer *timer)
 {
@@ -66,12 +66,14 @@ static inline void timerlist_add(struct timerlist *timerlist,
 						struct timerlist_timer, list);
 
 		if (timer_from_list->expire_time > timer->expire_time) {
+			/* リスト後ろに追加 */
 			qb_list_add_tail(&timer->list, timer_list);
 			found = QB_TRUE;
 			break;	/* for timer iteration */
 		}
 	}
 	if (found == QB_FALSE) {
+		/* 追加位置がなければ、最後尾に追加 */
 		qb_list_add_tail(&timer->list, &timerlist->timer_head);
 	}
 }
@@ -203,10 +205,10 @@ static inline void timerlist_expire(struct timerlist *timerlist)
 		     is_absolute_timer ? current_time_from_epoch :
 		     current_monotonic_time);
 
-		if (timer_from_list->expire_time < current_time) {
-
+		if (timer_from_list->expire_time < current_time) {/* 時間が経過済の場合 */
+			
 			timerlist_pre_dispatch(timerlist, timer_from_list);
-
+			/* 登録されたハンドラの実行 */
 			timer_from_list->timer_fn(timer_from_list->data);
 
 			timerlist_post_dispatch(timerlist, timer_from_list);

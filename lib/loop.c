@@ -27,7 +27,7 @@
 #include "util_int.h"
 
 static struct qb_loop *default_intance = NULL;
-
+/* イベント処理(各イベントのlevelリストの処理) */
 static void
 qb_loop_run_level(struct qb_loop_level *level)
 {
@@ -40,18 +40,19 @@ Ill_have_another:
 		job = qb_list_first_entry(&level->job_head, struct qb_loop_item, list);
 		qb_list_del(&job->list);
 		qb_list_init(&job->list);
+		/* イベント割り当てコールバックの実行の為に、dispatch_and_take_back()を実行する */
 		job->source->dispatch_and_take_back(job, level->priority);
 		level->todo--;
 		processed++;
 		if (level->l->stop_requested) {
-			return;
+			return;						/* LOOP停止 */
 		}
 		if (processed < level->to_process) {
 			goto Ill_have_another;
 		}
 	}
 }
-
+/* イベントのlevelリストの追加 */
 void
 qb_loop_level_item_add(struct qb_loop_level *level, struct qb_loop_item *job)
 {
@@ -59,7 +60,7 @@ qb_loop_level_item_add(struct qb_loop_level *level, struct qb_loop_item *job)
 	qb_list_add_tail(&job->list, &level->job_head);
 	level->todo++;
 }
-
+/* イベントのlevelリストの削除 */
 void
 qb_loop_level_item_del(struct qb_loop_level *level, struct qb_loop_item *job)
 {
@@ -79,7 +80,7 @@ qb_loop_default_get(void)
 {
 	return default_intance;
 }
-
+/* QBのLOOPのpolling生成 */
 struct qb_loop *
 qb_loop_create(void)
 {
@@ -89,6 +90,7 @@ qb_loop_create(void)
 	if (l == NULL) {
 		return NULL;
 	}
+	/* looop内のレベル（優先度）イベントリストの初期化 */
 	for (p = QB_LOOP_LOW; p <= QB_LOOP_HIGH; p++) {
 		l->level[p].priority = p;
 		l->level[p].to_process = 4;
@@ -98,7 +100,7 @@ qb_loop_create(void)
 		qb_list_init(&l->level[p].job_head);
 		qb_list_init(&l->level[p].wait_head);
 	}
-
+	/* timer,job,fd,signalのloopソース(イベント処理)生成 */
 	l->stop_requested = QB_FALSE;
 	l->timer_source = qb_loop_timer_create(l);
 	l->job_source = qb_loop_jobs_create(l);
@@ -110,7 +112,7 @@ qb_loop_create(void)
 	}
 	return l;
 }
-
+/* QBのLOOPのpolling削除 */
 void
 qb_loop_destroy(struct qb_loop *l)
 {
@@ -124,17 +126,17 @@ qb_loop_destroy(struct qb_loop *l)
 	}
 	free(l);
 }
-
+/* loop停止処理 */
 void
 qb_loop_stop(struct qb_loop *l)
 {
 	if (l == NULL) {
-		default_intance->stop_requested = QB_TRUE;
+		default_intance->stop_requested = QB_TRUE;	/* 停止フラグセット */
 	} else {
-		l->stop_requested = QB_TRUE;
+		l->stop_requested = QB_TRUE;	/* 停止フラグセット */
 	}
 }
-
+/* QBのLOOPの実行 */
 void
 qb_loop_run(struct qb_loop *lp)
 {
@@ -150,7 +152,7 @@ qb_loop_run(struct qb_loop *lp)
 	if (l == NULL) {
 		l = default_intance;
 	}
-	l->stop_requested = QB_FALSE;
+	l->stop_requested = QB_FALSE;	/* 停止フラグクリア */
 
 	do {
 		if (p_stop == QB_LOOP_LOW) {
@@ -158,7 +160,7 @@ qb_loop_run(struct qb_loop *lp)
 		} else {
 			p_stop--;
 		}
-
+		/* JOBイベントの取得 */
 		job_todo = 0;
 		if (l->job_source && l->job_source->poll) {
 			rc = l->job_source->poll(l->job_source, 0);
@@ -169,6 +171,7 @@ qb_loop_run(struct qb_loop *lp)
 				qb_util_perror(LOG_WARNING, "job->poll");
 			}
 		}
+		/* timerイベントの取得 */
 		timer_todo = 0;
 		if (l->timer_source && l->timer_source->poll) {
 			rc = l->timer_source->poll(l->timer_source, 0);
@@ -198,18 +201,19 @@ qb_loop_run(struct qb_loop *lp)
 				ms_timeout = -1;
 			}
 		}
+		/* fdイベントの取得 */
 		rc = l->fd_source->poll(l->fd_source, ms_timeout);
 		if (rc < 0) {
 			errno = -rc;
 			qb_util_perror(LOG_WARNING, "fd->poll");
 		}
-
+		/* 優先度の高いイベントリストから低いリスト側へイベントを処理 */
 		remaining_todo = 0;
 		for (p = QB_LOOP_HIGH; p >= QB_LOOP_LOW; p--) {
 			if (p >= p_stop) {
-				qb_loop_run_level(&l->level[p]);
+				qb_loop_run_level(&l->level[p]);	/* イベント処理 */
 				if (l->stop_requested) {
-					return;
+					return;							/* ループ停止 */
 				}
 			}
 			remaining_todo += l->level[p].todo;

@@ -48,7 +48,7 @@ _del(struct qb_poll_source *s, struct qb_poll_entry *pe, int32_t fd, int32_t i)
 	s->ufds[i].revents = 0;
 	return 0;
 }
-
+/* fdイベントのpoll()処理 */
 static int32_t
 _poll_and_add_to_jobs_(struct qb_loop_source *src, int32_t ms_timeout)
 {
@@ -66,6 +66,7 @@ _poll_and_add_to_jobs_(struct qb_loop_source *src, int32_t ms_timeout)
 	}
 
 retry_poll:
+	/* fdのpll() */
 	res = poll(s->ufds, s->poll_entry_count, ms_timeout);
 	if (errno == EINTR && res == -1) {
 		goto retry_poll;
@@ -89,12 +90,12 @@ retry_poll:
 			continue;
 		}
 		pe->ufd.revents = s->ufds[i].revents;
-		new_jobs += pe->add_to_jobs(src->l, pe);
+		new_jobs += pe->add_to_jobs(src->l, pe);		/* イベントをリストへセット */
 	}
 
 	return new_jobs;
 }
-
+/* poll()利用のfd pollイベントの初期化 */
 int32_t
 qb_poll_init(struct qb_poll_source *s)
 {
@@ -103,7 +104,7 @@ qb_poll_init(struct qb_poll_source *s)
 	s->driver.add = _add;
 	s->driver.mod = _mod;
 	s->driver.del = _del;
-	s->s.poll = _poll_and_add_to_jobs_;
+	s->s.poll = _poll_and_add_to_jobs_;	/* poll処理のセット */
 	return 0;
 }
 

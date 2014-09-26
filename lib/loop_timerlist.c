@@ -69,12 +69,13 @@ make_job_from_tmo(void *data)
 	t->state = QB_POLL_ENTRY_JOBLIST;
 	expired_timers++;
 }
-
+/* timerイベントのpoll処理 */
 static int32_t
 expire_the_timers(struct qb_loop_source *s, int32_t ms_timeout)
 {
 	struct qb_timer_source *ts = (struct qb_timer_source *)s;
 	expired_timers = 0;
+	/* timerlistライブラリのexpire処理の実行 */
 	timerlist_expire(&ts->timerlist);
 	return expired_timers;
 }
@@ -89,7 +90,7 @@ qb_loop_timer_msec_duration_to_expire(struct qb_loop_source * timer_source)
 	}
 	return left;
 }
-
+/* timerイベントの生成 */
 struct qb_loop_source *
 qb_loop_timer_create(struct qb_loop *l)
 {
@@ -98,8 +99,8 @@ qb_loop_timer_create(struct qb_loop *l)
 		return NULL;
 	}
 	my_src->s.l = l;
-	my_src->s.dispatch_and_take_back = timer_dispatch;
-	my_src->s.poll = expire_the_timers;
+	my_src->s.dispatch_and_take_back = timer_dispatch;	/* コールバックのセット */
+	my_src->s.poll = expire_the_timers;					/* timerイベントのpoll処理のセット */
 
 	timerlist_init(&my_src->timerlist);
 	my_src->timers = qb_array_create_2(16, sizeof(struct qb_loop_timer), 16);
@@ -169,7 +170,7 @@ _get_empty_array_position_(struct qb_timer_source *s)
 	install_pos = s->timer_entry_count - 1;
 	return install_pos;
 }
-
+/* timerイベントの追加 */
 int32_t
 qb_loop_timer_add(struct qb_loop * lp,
 		  enum qb_loop_priority p,
@@ -198,7 +199,7 @@ qb_loop_timer_add(struct qb_loop * lp,
 	t->install_pos = i;
 	t->item.user_data = data;
 	t->item.source = (struct qb_loop_source *)my_src;
-	t->dispatch_fn = timer_fn;
+	t->dispatch_fn = timer_fn;							/* 指定された実行コールバックのセット */
 	t->p = p;
 	qb_list_init(&t->item.list);
 
@@ -213,11 +214,12 @@ qb_loop_timer_add(struct qb_loop * lp,
 	if (timer_handle_out) {
 		*timer_handle_out = (((uint64_t) (t->check)) << 32) | t->install_pos;
 	}
+	/* timerlistへの追加(たぶん、追加時に取得も行っていたはず) */
 	return timerlist_add_duration(&my_src->timerlist,
 				      make_job_from_tmo, t,
 				      nsec_duration, &t->timerlist_handle);
 }
-
+/* timerイベント削除 */
 int32_t
 qb_loop_timer_del(struct qb_loop * lp, qb_loop_timer_handle th)
 {
