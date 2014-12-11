@@ -65,9 +65,10 @@ make_job_from_tmo(void *data)
 	struct qb_loop *l = t->item.source->l;
 
 	assert(t->state == QB_POLL_ENTRY_ACTIVE);
+	/* 実行レベルitemへの追加 */
 	qb_loop_level_item_add(&l->level[t->p], &t->item);
 	t->state = QB_POLL_ENTRY_JOBLIST;
-	expired_timers++;
+	expired_timers++;	/* 実行タイマーイベント数のカウントアップ */
 }
 /* timerイベントのpoll処理 */
 static int32_t
@@ -76,6 +77,7 @@ expire_the_timers(struct qb_loop_source *s, int32_t ms_timeout)
 	struct qb_timer_source *ts = (struct qb_timer_source *)s;
 	expired_timers = 0;
 	/* timerlistライブラリのexpire処理の実行 */
+	/* expired_timers()では、make_job_from_tmo()が実行されてexpired_timersがインクリメントされる */
 	timerlist_expire(&ts->timerlist);
 	return expired_timers;
 }

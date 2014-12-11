@@ -208,7 +208,7 @@ static inline void timerlist_expire(struct timerlist *timerlist)
 		if (timer_from_list->expire_time < current_time) {/* 時間が経過済の場合 */
 			
 			timerlist_pre_dispatch(timerlist, timer_from_list);
-			/* 登録されたハンドラの実行 */
+			/* 登録されたハンドラの実行(実行レベルitemへの追加)....make_job_from_tmo()が実行される */
 			timer_from_list->timer_fn(timer_from_list->data);
 
 			timerlist_post_dispatch(timerlist, timer_from_list);

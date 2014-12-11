@@ -163,6 +163,7 @@ qb_loop_run(struct qb_loop *lp)
 		/* JOBイベントの取得 */
 		job_todo = 0;
 		if (l->job_source && l->job_source->poll) {
+			/* JOBイベントの取り出しと、l->level[p]への登録 */
 			rc = l->job_source->poll(l->job_source, 0);
 			if (rc > 0) {
 				job_todo = rc;
@@ -174,9 +175,10 @@ qb_loop_run(struct qb_loop *lp)
 		/* timerイベントの取得 */
 		timer_todo = 0;
 		if (l->timer_source && l->timer_source->poll) {
+			/* 経過タイマーイベントの取り出しと、l->level[p]への登録 */
 			rc = l->timer_source->poll(l->timer_source, 0);
 			if (rc > 0) {
-				timer_todo = rc;
+				timer_todo = rc;	/* タイマーイベント数をセット */
 			} else if (rc == -1) {
 				errno = -rc;
 				qb_util_perror(LOG_WARNING, "timer->poll");
@@ -186,6 +188,7 @@ qb_loop_run(struct qb_loop *lp)
 			/*
 			 * if there are remaining todos or timer todos then don't wait.
 			 */
+			/* 残イベントがある場合と、timerイベントがある場合は、fdイベントの待ち無のpollを実行 */
 			ms_timeout = 0;
 		} else if (job_todo > 0) {
 			/*
@@ -193,11 +196,14 @@ qb_loop_run(struct qb_loop *lp)
 			 * then set a non-zero timeout. Jobs can spin out of
 			 * control if someone keeps adding them.
 			 */
+			/* その他の場合で、jobイベントがある場合は、fdイベントの50ms待ちのpollを実行 */
 			ms_timeout = 50;
 		} else {
 			if (l->timer_source) {
+				/* timerがある場合は、timerからfdイベントの待ち時間をセットしたpollを実行 */
 				ms_timeout = qb_loop_timer_msec_duration_to_expire(l->timer_source);
 			} else {
+				/* timerが無い場合は、fdイベントを発生まで待ち(-1)のpollを実行 */
 				ms_timeout = -1;
 			}
 		}
@@ -207,16 +213,16 @@ qb_loop_run(struct qb_loop *lp)
 			errno = -rc;
 			qb_util_perror(LOG_WARNING, "fd->poll");
 		}
-		/* 優先度の高いイベントリストから低いリスト側へイベントを処理 */
+		/* 優先度の高いイベントリストから低いリスト側へイベントを処理(QB_LOOP_HIGH->QB_LOOP_MED->QB_LOOP_LOW) */
 		remaining_todo = 0;
 		for (p = QB_LOOP_HIGH; p >= QB_LOOP_LOW; p--) {
 			if (p >= p_stop) {
-				qb_loop_run_level(&l->level[p]);	/* イベント処理 */
+				qb_loop_run_level(&l->level[p]);	/* レベルitemに登録されたイベント処理(登録ハンドラの実行) */
 				if (l->stop_requested) {
 					return;							/* ループ停止 */
 				}
 			}
-			remaining_todo += l->level[p].todo;
+			remaining_todo += l->level[p].todo;		/* 残イベント数の加算 */
 		}
 	} while (!l->stop_requested);
 }
