@@ -32,7 +32,7 @@ static int32_t
 new_event_notification(struct qb_ipcs_connection * c);
 
 static QB_LIST_DECLARE(qb_ipc_services);
-
+/* IPCサーバの生成 */
 qb_ipcs_service_t *
 qb_ipcs_create(const char *name,
 	       int32_t service_id,
@@ -63,7 +63,7 @@ qb_ipcs_create(const char *name,
 
 	s->service_id = service_id;
 	(void)strlcpy(s->name, name, NAME_MAX);
-
+	/* accept,create,msg_process,close,destroyハンドラセット */
 	s->serv_fns.connection_accept = handlers->connection_accept;
 	s->serv_fns.connection_created = handlers->connection_created;
 	s->serv_fns.msg_process = handlers->msg_process;
@@ -76,7 +76,7 @@ qb_ipcs_create(const char *name,
 
 	return s;
 }
-
+/* poll用(add,mod,del)ハンドラセット */
 void
 qb_ipcs_poll_handlers_set(struct qb_ipcs_service *s,
 			  struct qb_ipcs_poll_handlers *handlers)
@@ -99,7 +99,7 @@ qb_ipcs_service_context_get(qb_ipcs_service_t* s)
 {
 	return s->context;
 }
-
+/* IPCサーバのpoll開始 */
 int32_t
 qb_ipcs_run(struct qb_ipcs_service *s)
 {
@@ -115,6 +115,7 @@ qb_ipcs_run(struct qb_ipcs_service *s)
 
 	switch (s->type) {
 	case QB_IPC_SOCKET:
+		/* IPCサーバのソケット処理の初期化 */
 		qb_ipcs_us_init((struct qb_ipcs_service *)s);
 		break;
 	case QB_IPC_SHM:
@@ -134,6 +135,7 @@ qb_ipcs_run(struct qb_ipcs_service *s)
 	}
 
 	if (res == 0) {
+		/* ソケット生成～bindとpollingの開始 */
 		res = qb_ipcs_us_publish(s);
 		if (res < 0) {
 			(void)qb_ipcs_us_withdraw(s);

@@ -343,7 +343,7 @@ qb_ipcc_us_setup_connect(struct qb_ipcc_connection *c,
  **************************************************************************
  * SERVER
  */
-
+/* ソケット生成～bindとpollingの開始 */
 int32_t
 qb_ipcs_us_publish(struct qb_ipcs_service * s)
 {
@@ -416,7 +416,7 @@ qb_ipcs_us_publish(struct qb_ipcs_service * s)
 	if (listen(s->server_sock, SERVER_BACKLOG) == -1) {
 		qb_util_perror(LOG_ERR, "socket listen failed");
 	}
-
+	/* poll開始 */
 	res = s->poll_fns.dispatch_add(s->poll_priority, s->server_sock,
 				       POLLIN | POLLPRI | POLLNVAL,
 				       s, qb_ipcs_us_connection_acceptor);

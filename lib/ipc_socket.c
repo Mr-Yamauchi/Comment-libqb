@@ -293,7 +293,7 @@ qb_ipcc_us_disconnect(struct qb_ipcc_connection *c)
 	qb_ipcc_us_sock_close(c->request.u.us.sock);
 	qb_ipcc_us_sock_close(c->setup.u.us.sock);
 }
-
+/* IPC共通送信処理 */
 static ssize_t
 qb_ipc_socket_send(struct qb_ipc_one_way *one_way,
 		   const void *msg_ptr, size_t msg_len)
@@ -311,6 +311,7 @@ qb_ipc_socket_send(struct qb_ipc_one_way *one_way,
 	}
 
 	qb_sigpipe_ctl(QB_SIGPIPE_IGNORE);
+	/* 送信 */
 	rc = send(one_way->u.us.sock, msg_ptr, msg_len, MSG_NOSIGNAL);
 	if (rc == -1) {
 		rc = -errno;
@@ -326,7 +327,7 @@ qb_ipc_socket_send(struct qb_ipc_one_way *one_way,
 
 	return rc;
 }
-
+/* IPC共通送信処理 */
 static ssize_t
 qb_ipc_socket_sendv(struct qb_ipc_one_way *one_way, const struct iovec *iov,
 		    size_t iov_len)
@@ -345,7 +346,7 @@ qb_ipc_socket_sendv(struct qb_ipc_one_way *one_way, const struct iovec *iov,
 			return rc;
 		}
 	}
-
+	/* 送信 */
 	rc = writev(one_way->u.us.sock, iov, iov_len);
 
 	if (rc == -1) {
@@ -485,6 +486,7 @@ qb_ipcc_us_connect(struct qb_ipcc_connection * c,
 	qb_atomic_init();
 
 	c->needs_sock_for_poll = QB_FALSE;
+	/* 送信、受信処理の初期化(送信はIPCサーバとも共通 */
 	c->funcs.send = qb_ipc_socket_send;
 	c->funcs.sendv = qb_ipc_socket_sendv;
 	c->funcs.recv = qb_ipc_us_recv_at_most;
@@ -758,7 +760,7 @@ cleanup_hdr:
 	munmap(c->request.u.us.shared_data, SHM_CONTROL_SIZE);
 	return res;
 }
-
+/* IPCサーバのソケット処理の初期化 */
 void
 qb_ipcs_us_init(struct qb_ipcs_service *s)
 {
@@ -768,6 +770,7 @@ qb_ipcs_us_init(struct qb_ipcs_service *s)
 	s->funcs.recv = qb_ipc_us_recv_at_most;
 	s->funcs.peek = NULL;
 	s->funcs.reclaim = NULL;
+	/* 送信、受信処理の初期化(送信はIPCクライアントとも共通 */
 	s->funcs.send = qb_ipc_socket_send;
 	s->funcs.sendv = qb_ipc_socket_sendv;
 
